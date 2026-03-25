@@ -7,5 +7,7 @@ WTForms==3.0.1
 Werkzeug==2.3.6
 reportlab==4.0.4
 python-pptx==0.6.21
-Pillow==9.5.0
+Pillow>=10.0.0
 email_validator==2.1.1
+requests
+twilio
