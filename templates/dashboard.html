@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-speedometer2"></i> Dashboard 
+                <small class="text-muted">
+                    {% if current_user.role == 'admin' %}
+                        (Admin)
+                    {% else %}
+                        (User)
+                    {% endif %}
+                </small>
+            </h1>
+            <a href="{{ url_for('add_driver') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus"></i> Add Driver
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if current_user.role == 'admin' %}
+    <!-- Admin Section: User Management (optional) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-people"></i> User Management</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Drivers Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>{{ user.drivers|length }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row">
+    <!-- Drivers Section -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Drivers</h5>
+            </div>
+            <div class="card-body">
+                <input type="text" id="driverSearch" class="form-control mb-3" placeholder="Search drivers...">
+                <div id="driverList">
+                    {% if drivers %}
+                        {% for driver in drivers %}
+                            <div class="driver-item border rounded p-2 mb-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ driver.name }}</strong><br>
+                                    <small class="text-muted">{{ driver.car_number_plate }}</small>
+                                    {% if driver.vehicle %}
+                                        <br><small class="text-muted"><i class="bi bi-truck"></i> {{ driver.vehicle.make }} {{ driver.vehicle.model }}</small>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('driver_detail', id=driver.id) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('sack_driver', id=driver.id) }}" class="btn btn-sm btn-danger sack-driver">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No drivers registered.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> Recent Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Load → Offload</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                    <tr>
+                                        <td>{{ task.driver.name }}</td>
+                                        <td>{{ task.load_location }} → {{ task.offload_location }}</td>
+                                        <td>
+                                            {% if task.completed %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No tasks assigned.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Section -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Analytics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h3 id="tasksCompleted">-</h3>
+                                <p>Completed Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h3 id="tasksPending">-</h3>
+                                <p>Pending Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h3 id="driversCount">-</h3>
+                                <p>Active Drivers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="taskChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Buttons -->
+<div class="mt-3 d-flex gap-2">
+    <a href="{{ url_for('search') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-search"></i> Advanced Search
+    </a>
+    <a href="{{ url_for('summary_report', format='csv') }}" class="btn btn-outline-success">
+        <i class="bi bi-filetype-csv"></i> CSV
+    </a>
+    <a href="{{ url_for('summary_report', format='pdf') }}" class="btn btn-outline-danger">
+        <i class="bi bi-filetype-pdf"></i> PDF
+    </a>
+    <a href="{{ url_for('summary_report', format='ppt') }}" class="btn btn-outline-warning">
+        <i class="bi bi-filetype-pptx"></i> PPT
+    </a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    fetch('/api/dashboard_data')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('tasksCompleted').innerText = data.tasks_completed;
+            document.getElementById('tasksPending').innerText = data.tasks_pending;
+            document.getElementById('driversCount').innerText = data.drivers_count;
+
+            const ctx = document.getElementById('taskChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.monthly_data.map(item => item.month),
+                    datasets: [{
+                        label: 'Tasks Completed',
+                        data: data.monthly_data.map(item => item.count),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                }
+            });
+        });
+</script>
+
+<script>
+    // Simple driver search filter
+    document.getElementById('driverSearch').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let items = document.querySelectorAll('.driver-item');
+        items.forEach(item => {
+            let text = item.innerText.toLowerCase();
+            if (text.includes(filter)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

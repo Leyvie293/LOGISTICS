@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h2 class="h4 mb-0"><i class="bi bi-person-plus"></i> Register New Driver</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control") }}
+                                {% for error in form.name.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.phone.label(class="form-label") }}
+                                {{ form.phone(class="form-control") }}
+                                {% for error in form.phone.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.car_number_plate.label(class="form-label") }}
+                                {{ form.car_number_plate(class="form-control") }}
+                                {% for error in form.car_number_plate.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.vehicle_id.label(class="form-label") }}
+                                {{ form.vehicle_id(class="form-select") }}
+                                <small class="text-muted">Select a vehicle to assign, or leave as None.</small>
+                                {% for error in form.vehicle_id.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.certificate_of_conduct.label(class="form-label") }}
+                                {{ form.certificate_of_conduct(class="form-control", **{'data-preview': 'cert_preview'}) }}
+                                <img id="cert_preview" class="img-thumbnail mt-2" style="max-height: 100px; display: none;">
+                                {% for error in form.certificate_of_conduct.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.driving_license.label(class="form-label") }}
+                                {{ form.driving_license(class="form-control", **{'data-preview': 'license_preview'}) }}
+                                <img id="license_preview" class="img-thumbnail mt-2" style="max-height: 100px; display: none;">
+                                {% for error in form.driving_license.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.national_id.label(class="form-label") }}
+                                {{ form.national_id(class="form-control", **{'data-preview': 'id_preview'}) }}
+                                <img id="id_preview" class="img-thumbnail mt-2" style="max-height: 100px; display: none;">
+                                {% for error in form.national_id.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.vehicle_picture.label(class="form-label") }}
+                                {{ form.vehicle_picture(class="form-control", **{'data-preview': 'vehicle_preview'}) }}
+                                <img id="vehicle_preview" class="img-thumbnail mt-2" style="max-height: 100px; display: none;">
+                                {% for error in form.vehicle_picture.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.passport_photo.label(class="form-label") }}
+                                {{ form.passport_photo(class="form-control", **{'data-preview': 'passport_preview'}) }}
+                                <img id="passport_preview" class="img-thumbnail mt-2" style="max-height: 100px; display: none;">
+                                {% for error in form.passport_photo.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview images when file input changes
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const previewId = this.getAttribute('data-preview');
+            if (previewId && this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById(previewId);
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    });
+</script>
+{% endblock %}

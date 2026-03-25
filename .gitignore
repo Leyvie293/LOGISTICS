@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+venv/
+*.env
+
+# Database
+instance/
+*.db
+*.sqlite
+
+# Uploads
+static/uploads/
+
+# Config (if it contains secrets)
+config.py
+!config.py.example   # if you have an example config
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

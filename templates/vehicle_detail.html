@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">{{ vehicle.make }} {{ vehicle.model }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><i class="bi bi-car-front"></i> <strong>License Plate:</strong> {{ vehicle.plate }}</p>
+                        <p><i class="bi bi-box"></i> <strong>Capacity:</strong> {{ vehicle.capacity_kg or 'N/A' }} kg</p>
+                        <p><i class="bi bi-calendar-check"></i> <strong>Insurance Expiry:</strong> {{ vehicle.insurance_expiry.strftime('%Y-%m-%d') if vehicle.insurance_expiry else 'N/A' }}</p>
+                        <p><i class="bi bi-circle-fill 
+                            {% if vehicle.status == 'active' %}text-success
+                            {% elif vehicle.status == 'under_repair' %}text-warning
+                            {% else %}text-danger{% endif %}"></i>
+                            <strong>Status:</strong> {{ vehicle.status|replace('_', ' ')|title }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="bi bi-person"></i> <strong>Assigned Driver:</strong>
+                            {% if vehicle.driver %}
+                                <a href="{{ url_for('driver_detail', id=vehicle.driver.id) }}">{{ vehicle.driver.name }}</a>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </p>
+                        <p><i class="bi bi-calendar"></i> <strong>Registered:</strong> {{ vehicle.created_at.strftime('%Y-%m-%d') }}</p>
+                    </div>
+                </div>
+                <hr>
+                <h5>Maintenance Records</h5>
+                {% if vehicle.maintenance_records %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Cost</th>
+                                <th>Next Due</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in vehicle.maintenance_records %}
+                            <tr>
+                                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ record.description }}</td>
+                                <td>KSh {{ record.cost if record.cost else 'N/A' }}</td>
+                                <td>{{ record.next_due.strftime('%Y-%m-%d') if record.next_due else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No maintenance records.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('edit_vehicle', id=vehicle.id) }}" class="btn btn-warning">Edit Vehicle</a>
+                <a href="{{ url_for('list_vehicles') }}" class="btn btn-secondary">Back to List</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

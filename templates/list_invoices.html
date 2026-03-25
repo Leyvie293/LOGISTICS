@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-receipt"></i> Invoices</h1>
+    <a href="{{ url_for('create_invoice') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Create Invoice
+    </a>
+</div>
+
+<div class="row">
+    {% for invoice in invoices %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header {% if invoice.paid %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+                <strong>Invoice #{{ invoice.id }}</strong>
+                <span class="float-end">{{ invoice.date.strftime('%Y-%m-%d') }}</span>
+            </div>
+            <div class="card-body">
+                <p><strong>Client:</strong> {{ invoice.client_name }}</p>
+                <p><strong>Total:</strong> KSh {{ "%.2f"|format(invoice.total) }}</p>
+                <p><strong>Status:</strong> {% if invoice.paid %}Paid{% else %}Unpaid{% endif %}</p>
+                <p><strong>Tasks:</strong> {{ invoice.tasks|length }} task(s)</p>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('invoice_pdf', id=invoice.id) }}" class="btn btn-sm btn-danger">
+                    <i class="bi bi-file-pdf"></i> PDF
+                </a>
+                <!-- Future: add mark as paid button -->
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">No invoices created yet.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

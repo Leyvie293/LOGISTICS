@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h2 class="h4 mb-0"><i class="bi bi-search"></i> Advanced Search</h2>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('search') }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="plate" class="form-label">Car Plate</label>
+                            <input type="text" class="form-control" id="plate" name="plate" value="{{ request.args.get('plate', '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Driver Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ request.args.get('name', '') }}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="vehicle_status" class="form-label">Vehicle Status</label>
+                            <select class="form-select" id="vehicle_status" name="vehicle_status">
+                                <option value="">All</option>
+                                <option value="active" {% if request.args.get('vehicle_status') == 'active' %}selected{% endif %}>Active</option>
+                                <option value="under_repair" {% if request.args.get('vehicle_status') == 'under_repair' %}selected{% endif %}>Under Repair</option>
+                                <option value="retired" {% if request.args.get('vehicle_status') == 'retired' %}selected{% endif %}>Retired</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="expiry_soon" name="expiry_soon" {% if request.args.get('expiry_soon') %}checked{% endif %}>
+                                <label class="form-check-label" for="expiry_soon">
+                                    Insurance expiring soon (next 30 days)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </form>
+
+                {% if drivers %}
+                    <hr>
+                    <h5>Results ({{ drivers|length }} found)</h5>
+                    {% for driver in drivers %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ driver.name }}</h5>
+                                <p class="card-text">
+                                    <i class="bi bi-car-front"></i> Plate: {{ driver.car_number_plate }}<br>
+                                    <i class="bi bi-telephone"></i> Phone: {{ driver.phone }}<br>
+                                    {% if driver.vehicle %}
+                                    <i class="bi bi-truck"></i> Vehicle: {{ driver.vehicle.make }} {{ driver.vehicle.model }} ({{ driver.vehicle.status|title }})<br>
+                                    {% endif %}
+                                    <i class="bi bi-circle-fill {% if driver.active %}text-success{% else %}text-danger{% endif %}"></i>
+                                    Status: {% if driver.active %}Active{% else %}Sacked{% endif %}
+                                </p>
+                                <a href="{{ url_for('driver_detail', id=driver.id) }}" class="btn btn-sm btn-info">View Details</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% elif request.args %}
+                    <div class="alert alert-info mt-3">No drivers match the search criteria.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

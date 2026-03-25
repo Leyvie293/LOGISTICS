@@ -1,0 +1,29 @@
+body {
+    background-color: #f4f6f9;
+}
+
+.card {
+    border: none;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn {
+    border-radius: 20px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.driver-item {
+    background: white;
+    transition: all 0.2s;
+}
+
+.driver-item:hover {
+    background-color: #e9ecef;
+}
