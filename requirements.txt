@@ -11,3 +11,4 @@ Pillow>=10.0.0
 email_validator==2.1.1
 requests
 twilio
+gunicorn
