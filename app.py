@@ -17,10 +17,10 @@ from flask_mail import Mail, Message
 from sqlalchemy import func, extract
 
 # Import your models and forms
-from models import db, User, Driver, Task, Company, Vehicle, Payment, Invoice, MaintenanceRecord
+from models import db, User, Driver, Task, Company, Vehicle, Payment, MaintenanceRecord
 from forms import (
     RegistrationForm, LoginForm, DriverForm, TaskForm, SearchForm,
-    VehicleForm, PaymentForm, InvoiceForm, AdminUserEditForm
+    VehicleForm, PaymentForm, AdminUserEditForm
 )
 
 # Helper for route calculations (optional)
@@ -625,72 +625,6 @@ def add_payment(driver_id):
         flash('Payment recorded.', 'success')
         return redirect(url_for('driver_detail', id=driver.id))
     return render_template('add_payment.html', form=form, driver=driver)
-
-# Invoice management
-@app.route('/invoice/create', methods=['GET', 'POST'])
-@login_required
-def create_invoice():
-    form = InvoiceForm()
-    tasks = Task.query.filter_by(company_id=current_user.company_id, completed=True).all()
-    form.tasks.choices = [(t.id, f"{t.driver.name}: {t.load_location} → {t.offload_location}") for t in tasks]
-    if form.validate_on_submit():
-        selected_tasks = Task.query.filter(Task.id.in_(form.tasks.data)).all()
-        total = sum(task.fuel_cost or 0 for task in selected_tasks)  # adjust as needed
-        invoice = Invoice(
-            client_name=form.client_name.data,
-            client_email=form.client_email.data,
-            total=total,
-            paid=False,
-            company_id=current_user.company_id,
-            tasks=selected_tasks
-        )
-        db.session.add(invoice)
-        db.session.commit()
-        flash('Invoice created.', 'success')
-        return redirect(url_for('list_invoices'))
-    return render_template('create_invoice.html', form=form)
-
-@app.route('/invoices')
-@login_required
-def list_invoices():
-    invoices = Invoice.query.filter_by(company_id=current_user.company_id).all()
-    return render_template('list_invoices.html', invoices=invoices)
-
-@app.route('/invoice/<int:id>/pdf')
-@login_required
-def invoice_pdf(id):
-    invoice = Invoice.query.get_or_404(id)
-    if invoice.company_id != current_user.company_id:
-        abort(403)
-    output = BytesIO()
-    doc = SimpleDocTemplate(output, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
-    story.append(Paragraph(f"Invoice #{invoice.id}", styles['Title']))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(f"Client: {invoice.client_name}", styles['Normal']))
-    story.append(Paragraph(f"Date: {invoice.date.strftime('%Y-%m-%d')}", styles['Normal']))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph("Tasks:", styles['Heading2']))
-    data = [['Driver', 'Load → Offload', 'Amount']]
-    for task in invoice.tasks:
-        data.append([task.driver.name, f"{task.load_location} → {task.offload_location}", f"${task.fuel_cost or 0:.2f}"])
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.grey),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0,0), (-1,0), 12),
-        ('BACKGROUND', (0,1), (-1,-1), colors.beige),
-        ('GRID', (0,0), (-1,-1), 1, colors.black)
-    ]))
-    story.append(table)
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(f"Total: ${invoice.total:.2f}", styles['Normal']))
-    doc.build(story)
-    output.seek(0)
-    return send_file(output, mimetype='application/pdf', as_attachment=True, download_name=f'invoice_{invoice.id}.pdf')
 
 # Admin user management
 @app.route('/admin/users')
