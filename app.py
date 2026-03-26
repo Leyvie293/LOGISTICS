@@ -2,7 +2,7 @@ import os
 import csv
 import uuid
 from io import StringIO, BytesIO
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Flask, render_template, url_for, flash, redirect, request, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
@@ -61,6 +61,19 @@ mail = Mail(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# ----------------------------------------------------------------------
+# Database initialization (runs on app start, e.g., when gunicorn loads)
+# ----------------------------------------------------------------------
+with app.app_context():
+    db.create_all()
+    if Company.query.count() == 0:
+        default_company = Company(name='Default Company')
+        db.session.add(default_company)
+        db.session.commit()
+        print("Default company created")
+    else:
+        print("Company already exists")
 
 # ----------------------------------------------------------------------
 # User loader
@@ -801,20 +814,7 @@ def create_admin():
             return "Admin user already exists."
 
 # ----------------------------------------------------------------------
-# Main entry point
+# Main entry point (for local development)
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        # Create default company if none
-        if Company.query.count() == 0:
-            default_company = Company(name='Default Company')
-            db.session.add(default_company)
-            db.session.commit()
-        # Optionally create admin user if you don't want to use the /create-admin route
-        # if not User.query.filter_by(username='admin').first():
-        #     admin = User(username='admin', email='admin@example.com', role='admin', company_id=1)
-        #     admin.set_password('admin')
-        #     db.session.add(admin)
-        #     db.session.commit()
     app.run(debug=True)
