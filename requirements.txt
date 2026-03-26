@@ -12,3 +12,4 @@ email_validator==2.1.1
 requests
 twilio
 gunicorn
+psycopg2-binary
