@@ -4,7 +4,6 @@ import uuid
 from io import StringIO, BytesIO
 from datetime import datetime, date
 from functools import wraps
-
 from flask import Flask, render_template, url_for, flash, redirect, request, send_file, abort, jsonify
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 from werkzeug.utils import secure_filename
@@ -17,40 +16,62 @@ from pptx import Presentation
 from flask_mail import Mail, Message
 from sqlalchemy import func, extract
 
-# Import your configuration and models
-from config import Config
+# Import your models and forms
 from models import db, User, Driver, Task, Company, Vehicle, Payment, Invoice, MaintenanceRecord
-
-# Import forms (you need to create these forms)
 from forms import (
     RegistrationForm, LoginForm, DriverForm, TaskForm, SearchForm,
     VehicleForm, PaymentForm, InvoiceForm, AdminUserEditForm
 )
 
-# Import helper for route calculations
-from route_utils import get_distance_and_time  # you must implement this
+# Helper for route calculations (optional)
+# from route_utils import get_distance_and_time  # uncomment if you have API key
 
 app = Flask(__name__)
-app.config.from_object(Config)
 
+# ----------------------------------------------------------------------
+# Configuration (using environment variables, no separate config.py)
+# ----------------------------------------------------------------------
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-secret-key')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL',
+    'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'logistics.db'))
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Upload folder for driver documents
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Mail settings (for notifications)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'levido14@gmail.com')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+
+# OpenRouteService API key (optional)
+app.config['ORS_API_KEY'] = os.environ.get('ORS_API_KEY', '')
+
+# Twilio settings (optional)
+app.config['TWILIO_ACCOUNT_SID'] = os.environ.get('TWILIO_ACCOUNT_SID', '')
+app.config['TWILIO_AUTH_TOKEN'] = os.environ.get('TWILIO_AUTH_TOKEN', '')
+app.config['TWILIO_PHONE'] = os.environ.get('TWILIO_PHONE', '')
+
+# Initialize extensions
 db.init_app(app)
-
-# Flask extensions
 mail = Mail(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# ------------------------------
+# ----------------------------------------------------------------------
 # User loader
-# ------------------------------
+# ----------------------------------------------------------------------
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ------------------------------
+# ----------------------------------------------------------------------
 # Admin decorator
-# ------------------------------
+# ----------------------------------------------------------------------
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -59,9 +80,9 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ------------------------------
-# File handling (unchanged)
-# ------------------------------
+# ----------------------------------------------------------------------
+# File handling
+# ----------------------------------------------------------------------
 def save_file(file, prefix=''):
     if file and file.filename:
         ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
@@ -77,9 +98,9 @@ def save_file(file, prefix=''):
             return None
     return None
 
-# ------------------------------
-# Email (commented out by default)
-# ------------------------------
+# ----------------------------------------------------------------------
+# Email and SMS helpers (uncomment when ready)
+# ----------------------------------------------------------------------
 def send_email_task_assigned(task, assigner):
     subject = f"New Task Assigned to {task.driver.name}"
     body = f"""
@@ -90,6 +111,7 @@ def send_email_task_assigned(task, assigner):
     Assigned by: {assigner.username}
     """
     recipients = [assigner.email]
+    # Uncomment to send email
     # msg = Message(subject, recipients=recipients)
     # msg.body = body
     # mail.send(msg)
@@ -106,24 +128,23 @@ def send_email_task_completed(task, completer):
     Completed on: {task.completed_date}
     """
     recipients = [completer.email]
+    # Uncomment to send email
     # msg = Message(subject, recipients=recipients)
     # msg.body = body
     # mail.send(msg)
     print(f"Email would be sent to {recipients}:\n{body}")
 
-# ------------------------------
-# Twilio SMS (optional)
-# ------------------------------
 def send_sms(to, body):
-    # Uncomment and configure Twilio credentials in config
-    # from twilio.rest import Client
-    # client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
-    # client.messages.create(body=body, from_=app.config['TWILIO_PHONE'], to=to)
-    print(f"SMS would be sent to {to}: {body}")
+    if app.config['TWILIO_ACCOUNT_SID'] and app.config['TWILIO_AUTH_TOKEN']:
+        from twilio.rest import Client
+        client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+        client.messages.create(body=body, from_=app.config['TWILIO_PHONE'], to=to)
+    else:
+        print(f"SMS would be sent to {to}: {body}")
 
-# ------------------------------
-# Report generation (unchanged but uses company)
-# ------------------------------
+# ----------------------------------------------------------------------
+# Report generation functions (unchanged)
+# ----------------------------------------------------------------------
 def generate_driver_csv(driver, tasks):
     output = StringIO()
     writer = csv.writer(output)
@@ -244,14 +265,14 @@ def generate_summary_ppt(drivers):
     output.seek(0)
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation', as_attachment=True, download_name='summary_report.pptx')
 
-# ------------------------------
+# ----------------------------------------------------------------------
 # Routes
-# ------------------------------
+# ----------------------------------------------------------------------
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Registration is now admin only – you can keep it for development but remove in production
+# Registration (keep but you may want to restrict later)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -259,9 +280,9 @@ def register():
     form = RegistrationForm()
     user_count = User.query.count()
     if form.validate_on_submit():
-        # In production, you would only allow admin to create users
+        # In production, admin would assign company. For simplicity, use company_id=1.
         role = form.role.data
-        user = User(username=form.username.data, email=form.email.data, role=role, company_id=1)  # set a default company
+        user = User(username=form.username.data, email=form.email.data, role=role, company_id=1)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -289,39 +310,29 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# ------------------------------
-# Dashboard (with company isolation)
-# ------------------------------
+# Dashboard
 @app.route('/dashboard')
 @login_required
 def dashboard():
     if current_user.role == 'admin':
-        # Admin sees all drivers and tasks within their company
         drivers = Driver.query.filter_by(active=True, company_id=current_user.company_id).all()
         tasks = Task.query.filter_by(company_id=current_user.company_id).all()
         users = User.query.filter_by(company_id=current_user.company_id).all()
     else:
-        # Staff sees only their own drivers and tasks
         drivers = Driver.query.filter_by(user_id=current_user.id, active=True).all()
         tasks = Task.query.filter_by(user_id=current_user.id).all()
         users = None
     return render_template('dashboard.html', drivers=drivers, tasks=tasks, users=users)
 
-# ------------------------------
 # API endpoint for dashboard analytics
-# ------------------------------
 @app.route('/api/dashboard_data')
 @login_required
 def dashboard_data():
-    # Get data for current user's company
     tasks = Task.query.filter_by(company_id=current_user.company_id)
     drivers = Driver.query.filter_by(company_id=current_user.company_id, active=True)
-
     tasks_completed = tasks.filter_by(completed=True).count()
     tasks_pending = tasks.filter_by(completed=False).count()
     drivers_count = drivers.count()
-
-    # Monthly completions for the last 6 months
     monthly = db.session.query(
         extract('year', Task.completed_date).label('year'),
         extract('month', Task.completed_date).label('month'),
@@ -330,9 +341,7 @@ def dashboard_data():
      .group_by('year', 'month') \
      .order_by('year', 'month') \
      .limit(6).all()
-
     monthly_data = [{'month': f"{int(m[1])}/{int(m[0])}", 'count': m[2]} for m in monthly]
-
     return jsonify({
         'tasks_completed': tasks_completed,
         'tasks_pending': tasks_pending,
@@ -340,20 +349,19 @@ def dashboard_data():
         'monthly_data': monthly_data
     })
 
-# ------------------------------
-# Driver management (with company isolation)
-# ------------------------------
+# Driver management
 @app.route('/driver/add', methods=['GET', 'POST'])
 @login_required
 def add_driver():
     form = DriverForm()
+    # Populate vehicle choices for current company
+    form.vehicle_id.choices = [(0, 'None')] + [(v.id, f"{v.make} {v.model} ({v.plate})") for v in Vehicle.query.filter_by(company_id=current_user.company_id).all()]
     if form.validate_on_submit():
         cert_path = save_file(form.certificate_of_conduct.data, prefix='cert')
         license_path = save_file(form.driving_license.data, prefix='license')
         id_path = save_file(form.national_id.data, prefix='id')
         vehicle_path = save_file(form.vehicle_picture.data, prefix='vehicle')
         passport_path = save_file(form.passport_photo.data, prefix='passport')
-
         driver = Driver(
             name=form.name.data,
             phone=form.phone.data,
@@ -364,7 +372,8 @@ def add_driver():
             vehicle_picture=vehicle_path,
             passport_photo=passport_path,
             user_id=current_user.id,
-            company_id=current_user.company_id
+            company_id=current_user.company_id,
+            vehicle_id=form.vehicle_id.data if form.vehicle_id.data != 0 else None
         )
         db.session.add(driver)
         db.session.commit()
@@ -387,10 +396,13 @@ def edit_driver(id):
     if current_user.role != 'admin' and driver.user_id != current_user.id:
         abort(403)
     form = DriverForm()
+    # Populate vehicle choices
+    form.vehicle_id.choices = [(0, 'None')] + [(v.id, f"{v.make} {v.model} ({v.plate})") for v in Vehicle.query.filter_by(company_id=current_user.company_id).all()]
     if form.validate_on_submit():
         driver.name = form.name.data
         driver.phone = form.phone.data
         driver.car_number_plate = form.car_number_plate.data
+        driver.vehicle_id = form.vehicle_id.data if form.vehicle_id.data != 0 else None
         if form.certificate_of_conduct.data:
             driver.certificate_of_conduct = save_file(form.certificate_of_conduct.data, prefix='cert')
         if form.driving_license.data:
@@ -404,9 +416,11 @@ def edit_driver(id):
         db.session.commit()
         flash('Driver details updated.', 'success')
         return redirect(url_for('driver_detail', id=driver.id))
+    # Pre-populate
     form.name.data = driver.name
     form.phone.data = driver.phone
     form.car_number_plate.data = driver.car_number_plate
+    form.vehicle_id.data = driver.vehicle_id or 0
     return render_template('edit_driver.html', form=form, driver=driver)
 
 @app.route('/driver/<int:id>/sack')
@@ -445,9 +459,7 @@ def delete_doc(id, doc_type):
             flash('Document deleted.', 'success')
     return redirect(url_for('driver_detail', id=driver.id))
 
-# ------------------------------
 # Vehicle management
-# ------------------------------
 @app.route('/vehicle/add', methods=['GET', 'POST'])
 @login_required
 def add_vehicle():
@@ -499,7 +511,7 @@ def edit_vehicle(id):
         db.session.commit()
         flash('Vehicle updated.', 'success')
         return redirect(url_for('vehicle_detail', id=vehicle.id))
-    # Pre‑populate form
+    # Pre-populate
     form.make.data = vehicle.make
     form.model.data = vehicle.model
     form.plate.data = vehicle.plate
@@ -508,9 +520,7 @@ def edit_vehicle(id):
     form.status.data = vehicle.status
     return render_template('edit_vehicle.html', form=form, vehicle=vehicle)
 
-# ------------------------------
-# Task management (with distance calculation)
-# ------------------------------
+# Task management (with distance calculation placeholder)
 @app.route('/driver/<int:driver_id>/task/add', methods=['GET', 'POST'])
 @login_required
 def add_task(driver_id):
@@ -519,25 +529,23 @@ def add_task(driver_id):
         abort(403)
     form = TaskForm()
     if form.validate_on_submit():
-        # Optionally get coordinates from addresses (you need geocoding)
-        # For now, we'll compute distance and time using OpenRouteService
-        # You need to implement get_distance_and_time(address1, address2) that returns (distance_km, duration_sec)
-        try:
-            distance_km, duration_sec = get_distance_and_time(form.load_location.data, form.offload_location.data)
-            fuel_cost = distance_km * 0.3  # example: $0.3 per km
-        except:
-            distance_km = duration_sec = fuel_cost = None
-            flash('Could not calculate route distance. Check location names.', 'warning')
-
+        # Optionally calculate distance (uncomment if API key set)
+        # distance_km, duration_sec = None, None
+        # try:
+        #     from route_utils import get_distance_and_time
+        #     distance_km, duration_sec = get_distance_and_time(form.load_location.data, form.offload_location.data)
+        # except:
+        #     pass
+        # fuel_cost = distance_km * 0.3 if distance_km else None
         task = Task(
             load_location=form.load_location.data,
             offload_location=form.offload_location.data,
-            distance_km=distance_km,
-            estimated_duration_sec=duration_sec,
-            fuel_cost=fuel_cost,
             driver_id=driver.id,
             user_id=current_user.id,
-            company_id=current_user.company_id
+            company_id=current_user.company_id,
+            # distance_km=distance_km,
+            # estimated_duration_sec=duration_sec,
+            # fuel_cost=fuel_cost
         )
         db.session.add(task)
         db.session.commit()
@@ -564,33 +572,25 @@ def complete_task(id):
     flash('Task marked as completed.', 'success')
     return redirect(url_for('driver_detail', id=task.driver_id))
 
-# ------------------------------
-# Search (advanced filters)
-# ------------------------------
+# Advanced search
 @app.route('/search', methods=['GET', 'POST'])
 @login_required
 def search():
     form = SearchForm()
-    # Build query with filters
     query = Driver.query.filter_by(active=True, company_id=current_user.company_id)
     if request.args.get('plate'):
         query = query.filter(Driver.car_number_plate.ilike(f"%{request.args['plate']}%"))
     if request.args.get('name'):
         query = query.filter(Driver.name.ilike(f"%{request.args['name']}%"))
-    # Filter by vehicle status if requested
     if request.args.get('vehicle_status'):
         query = query.join(Vehicle).filter(Vehicle.status == request.args['vehicle_status'])
-    # Filter by document expiry (e.g., insurance expiry in next 30 days)
     if request.args.get('expiry_soon'):
-        # For example, check insurance expiry of linked vehicle
         soon = date.today() + timedelta(days=30)
         query = query.join(Vehicle).filter(Vehicle.insurance_expiry <= soon)
     drivers = query.all()
     return render_template('search_results.html', form=form, drivers=drivers)
 
-# ------------------------------
 # Payment management
-# ------------------------------
 @app.route('/driver/<int:driver_id>/payment/add', methods=['GET', 'POST'])
 @login_required
 def add_payment(driver_id):
@@ -598,7 +598,6 @@ def add_payment(driver_id):
     if current_user.role != 'admin' and driver.user_id != current_user.id:
         abort(403)
     form = PaymentForm()
-    # Populate task choices for this driver (uncompleted tasks or all)
     form.task_id.choices = [(0, 'None')] + [(t.id, f"{t.load_location} → {t.offload_location}") for t in Task.query.filter_by(driver_id=driver.id).all()]
     if form.validate_on_submit():
         payment = Payment(
@@ -614,19 +613,16 @@ def add_payment(driver_id):
         return redirect(url_for('driver_detail', id=driver.id))
     return render_template('add_payment.html', form=form, driver=driver)
 
-# ------------------------------
 # Invoice management
-# ------------------------------
 @app.route('/invoice/create', methods=['GET', 'POST'])
 @login_required
 def create_invoice():
     form = InvoiceForm()
-    # Populate tasks from the current user's company
     tasks = Task.query.filter_by(company_id=current_user.company_id, completed=True).all()
     form.tasks.choices = [(t.id, f"{t.driver.name}: {t.load_location} → {t.offload_location}") for t in tasks]
     if form.validate_on_submit():
         selected_tasks = Task.query.filter(Task.id.in_(form.tasks.data)).all()
-        total = sum(task.fuel_cost or 0 for task in selected_tasks)  # or sum of actual charges
+        total = sum(task.fuel_cost or 0 for task in selected_tasks)  # adjust as needed
         invoice = Invoice(
             client_name=form.client_name.data,
             client_email=form.client_email.data,
@@ -653,7 +649,6 @@ def invoice_pdf(id):
     invoice = Invoice.query.get_or_404(id)
     if invoice.company_id != current_user.company_id:
         abort(403)
-    # Generate PDF using ReportLab
     output = BytesIO()
     doc = SimpleDocTemplate(output, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -684,9 +679,7 @@ def invoice_pdf(id):
     output.seek(0)
     return send_file(output, mimetype='application/pdf', as_attachment=True, download_name=f'invoice_{invoice.id}.pdf')
 
-# ------------------------------
 # Admin user management
-# ------------------------------
 @app.route('/admin/users')
 @login_required
 @admin_required
@@ -750,9 +743,7 @@ def delete_user(id):
     flash('User deleted.', 'success')
     return redirect(url_for('list_users'))
 
-# ------------------------------
-# Reports (updated to respect company)
-# ------------------------------
+# Reports
 @app.route('/report/driver/<int:driver_id>')
 @login_required
 def driver_report(driver_id):
@@ -787,21 +778,43 @@ def summary_report():
     else:
         abort(400)
 
-# ------------------------------
-# Main
-# ------------------------------
+# ----------------------------------------------------------------------
+# Temporary admin creation route (remove after first use)
+# ----------------------------------------------------------------------
+@app.route('/create-admin')
+def create_admin():
+    with app.app_context():
+        # Ensure default company exists
+        company = Company.query.first()
+        if not company:
+            company = Company(name='Default Company')
+            db.session.add(company)
+            db.session.commit()
+        # Create admin user if not exists
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', email='admin@example.com', role='admin', company_id=company.id)
+            admin.set_password('admin')
+            db.session.add(admin)
+            db.session.commit()
+            return "Admin user created. You can now login with admin/admin."
+        else:
+            return "Admin user already exists."
+
+# ----------------------------------------------------------------------
+# Main entry point
+# ----------------------------------------------------------------------
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # Create a default company if none exists
+        # Create default company if none
         if Company.query.count() == 0:
             default_company = Company(name='Default Company')
             db.session.add(default_company)
             db.session.commit()
-            # Optionally create an admin user
-            if User.query.count() == 0:
-                admin = User(username='admin', email='admin@example.com', role='admin', company_id=default_company.id)
-                admin.set_password('admin')
-                db.session.add(admin)
-                db.session.commit()
+        # Optionally create admin user if you don't want to use the /create-admin route
+        # if not User.query.filter_by(username='admin').first():
+        #     admin = User(username='admin', email='admin@example.com', role='admin', company_id=1)
+        #     admin.set_password('admin')
+        #     db.session.add(admin)
+        #     db.session.commit()
     app.run(debug=True)
