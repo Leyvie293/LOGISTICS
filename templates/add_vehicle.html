@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-truck"></i> Add New Vehicle</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.make.label(class="form-label") }}
+                            {{ form.make(class="form-control", placeholder="e.g., Toyota, Isuzu, Mitsubishi") }}
+                            {% for error in form.make.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.model.label(class="form-label") }}
+                            {{ form.model(class="form-control", placeholder="e.g., Hilux, Fuso, Canter") }}
+                            {% for error in form.model.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.plate.label(class="form-label") }}
+                            {{ form.plate(class="form-control", placeholder="e.g., KBA 123A") }}
+                            {% for error in form.plate.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.capacity_kg.label(class="form-label") }}
+                            {{ form.capacity_kg(class="form-control", placeholder="Weight in kilograms") }}
+                            {% for error in form.capacity_kg.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.insurance_expiry.label(class="form-label") }}
+                            {{ form.insurance_expiry(class="form-control", type="date") }}
+                            {% for error in form.insurance_expiry.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select") }}
+                            {% for error in form.status.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i> Vehicle status can be updated later. Insurance expiry alerts will be shown when within 30 days.
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <a href="{{ url_for('list_vehicles') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
