@@ -19,6 +19,7 @@ class Company(db.Model):
     vehicles = db.relationship('Vehicle', backref='company', lazy=True)
     tasks = db.relationship('Task', backref='company', lazy=True)
     invoices = db.relationship('Invoice', backref='company', lazy=True)
+    partners = db.relationship('Partner', backref='company', lazy=True)
 
 # ------------------------------
 # User
@@ -35,6 +36,8 @@ class User(UserMixin, db.Model):
     # Relationships
     drivers = db.relationship('Driver', backref='user', lazy=True, cascade='all, delete-orphan')
     tasks = db.relationship('Task', backref='assigner', lazy=True)
+    partners = db.relationship('Partner', foreign_keys='Partner.user_id', backref='registrar', lazy=True)
+    approved_partners = db.relationship('Partner', foreign_keys='Partner.approved_by', backref='approver', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -148,3 +151,51 @@ class MaintenanceRecord(db.Model):
     description = db.Column(db.Text, nullable=False)
     cost = db.Column(db.Float, nullable=True)
     next_due = db.Column(db.Date, nullable=True)
+
+# ------------------------------
+# Partner (for partner onboarding)
+# ------------------------------
+class Partner(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    business_name = db.Column(db.String(100), nullable=False)
+    business_type = db.Column(db.String(50), nullable=False)  # 'limited_company', 'registered_business', 'sole_proprietorship'
+    registration_number = db.Column(db.String(100))
+    kra_pin = db.Column(db.String(50), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    physical_address = db.Column(db.String(200))
+    
+    # Director Information
+    director_name = db.Column(db.String(100), nullable=False)
+    director_id_number = db.Column(db.String(50), nullable=False)
+    director_phone = db.Column(db.String(20))
+    director_email = db.Column(db.String(100))
+    
+    # Document paths
+    git_cover = db.Column(db.String(200))  # GIT COVER
+    incorporation_cert = db.Column(db.String(200))  # Certificate of incorporation/Registration Cert/ID
+    kra_certificate = db.Column(db.String(200))  # KRA Pin Certificate
+    logbook_copy = db.Column(db.String(200))  # Copy of Logbooks
+    director_id_copy = db.Column(db.String(200))  # Copy of Director's ID
+    driver_licenses = db.Column(db.Text)  # Comma-separated paths for multiple driver licenses
+    contracts = db.Column(db.Text)  # Comma-separated paths for multiple contract documents
+    
+    # Fleet details
+    vehicle_make = db.Column(db.String(50))
+    vehicle_model = db.Column(db.String(50))
+    vehicle_plate = db.Column(db.String(20))
+    vehicle_capacity_kg = db.Column(db.Float)
+    
+    # Status and tracking
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, suspended
+    rejection_reason = db.Column(db.Text)
+    date_registered = db.Column(db.DateTime, default=datetime.utcnow)
+    date_approved = db.Column(db.DateTime)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # User who registered the partner
+    
+    def __repr__(self):
+        return f"Partner('{self.business_name}', '{self.status}')"

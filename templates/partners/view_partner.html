@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-building"></i> Partner Details</h4>
+                <div>
+                    <a href="{{ url_for('edit_partner', id=partner.id) }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="{{ url_for('list_partners') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Status Badge -->
+                <div class="alert {% if partner.status == 'approved' %}alert-success{% elif partner.status == 'pending' %}alert-warning{% elif partner.status == 'rejected' %}alert-danger{% else %}alert-secondary{% endif %}">
+                    <strong>Status:</strong> {{ partner.status|upper }}
+                    {% if partner.rejection_reason %}
+                        <br><strong>Reason:</strong> {{ partner.rejection_reason }}
+                    {% endif %}
+                </div>
+                
+                <div class="row">
+                    <!-- Business Information -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Business Information</h5>
+                        <table class="table table-sm">
+                            <tr><th>Business Name:</th><td>{{ partner.business_name }}</td></tr>
+                            <tr><th>Business Type:</th>
+                                <td>
+                                    {% if partner.business_type == 'limited_company' %}
+                                        Limited Company
+                                    {% elif partner.business_type == 'registered_business' %}
+                                        Registered Business
+                                    {% else %}
+                                        Sole Proprietorship
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr><th>Registration Number:</th><td>{{ partner.registration_number or 'N/A' }}</td></tr>
+                            <tr><th>KRA PIN:</th><td>{{ partner.kra_pin }}</td></tr>
+                            <tr><th>Phone:</th><td>{{ partner.phone }}</td></tr>
+                            <tr><th>Email:</th><td>{{ partner.email }}</td></tr>
+                            <tr><th>Physical Address:</th><td>{{ partner.physical_address or 'N/A' }}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Director Information -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Director/Proprietor Information</h5>
+                        <table class="table table-sm">
+                            <tr><th>Name:</th><td>{{ partner.director_name }}</td></tr>
+                            <tr><th>ID Number:</th><td>{{ partner.director_id_number }}</td></tr>
+                            <tr><th>Phone:</th><td>{{ partner.director_phone or 'N/A' }}</td></tr>
+                            <tr><th>Email:</th><td>{{ partner.director_email or 'N/A' }}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Fleet Details -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Fleet Details</h5>
+                        <table class="table table-sm">
+                            <tr><th>Vehicle Make:</th><td>{{ partner.vehicle_make or 'N/A' }}</td></tr>
+                            <tr><th>Vehicle Model:</th><td>{{ partner.vehicle_model or 'N/A' }}</td></tr>
+                            <tr><th>Plate Number:</th><td>{{ partner.vehicle_plate or 'N/A' }}</td></tr>
+                            <tr><th>Capacity (kg):</th><td>{{ partner.vehicle_capacity_kg or 'N/A' }}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Registration Info -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Registration Information</h5>
+                        <table class="table table-sm">
+                            <tr><th>Date Registered:</th><td>{{ partner.date_registered.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+                            <tr><th>Date Approved:</th><td>{{ partner.date_approved.strftime('%Y-%m-%d %H:%M') if partner.date_approved else 'Pending' }}</td></tr>
+                            <tr><th>Registered By:</th><td>{{ partner.user_id }}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Documents -->
+                    <div class="col-12 mt-3">
+                        <h5 class="border-bottom pb-2">Uploaded Documents</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <strong>GIT Cover:</strong><br>
+                                {% if partner.git_cover %}
+                                    <a href="{{ url_for('static', filename=partner.git_cover) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i> View Document
+                                    </a>
+                                    <form action="{{ url_for('delete_partner_document', id=partner.id, doc_type='git_cover') }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <strong>Incorporation/Registration:</strong><br>
+                                {% if partner.incorporation_cert %}
+                                    <a href="{{ url_for('static', filename=partner.incorporation_cert) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i> View Document
+                                    </a>
+                                    <form action="{{ url_for('delete_partner_document', id=partner.id, doc_type='incorporation') }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <strong>KRA Certificate:</strong><br>
+                                {% if partner.kra_certificate %}
+                                    <a href="{{ url_for('static', filename=partner.kra_certificate) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i> View Document
+                                    </a>
+                                    <form action="{{ url_for('delete_partner_document', id=partner.id, doc_type='kra') }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <strong>Logbook Copy:</strong><br>
+                                {% if partner.logbook_copy %}
+                                    <a href="{{ url_for('static', filename=partner.logbook_copy) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i> View Document
+                                    </a>
+                                    <form action="{{ url_for('delete_partner_document', id=partner.id, doc_type='logbook') }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <strong>Director's ID Copy:</strong><br>
+                                {% if partner.director_id_copy %}
+                                    <a href="{{ url_for('static', filename=partner.director_id_copy) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i> View Document
+                                    </a>
+                                    <form action="{{ url_for('delete_partner_document', id=partner.id, doc_type='director_id') }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Driver Licenses -->
+                        <div class="mt-3">
+                            <strong>Driver Licenses:</strong><br>
+                            {% if driver_licenses %}
+                                {% for license in driver_licenses %}
+                                    <div class="mb-1">
+                                        <a href="{{ url_for('static', filename=license) }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-file-earmark-person"></i> Driver License {{ loop.index }}
+                                        </a>
+                                        <form action="{{ url_for('delete_driver_license', id=partner.id, license_index=loop.index0) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this license?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No driver licenses uploaded</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Contracts -->
+                        <div class="mt-3">
+                            <strong>Contracts:</strong><br>
+                            {% if partner.contracts %}
+                                {% set contracts = partner.contracts.split(',') %}
+                                {% for contract in contracts %}
+                                    <div class="mb-1">
+                                        <a href="{{ url_for('static', filename=contract) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-file-earmark-text"></i> Contract {{ loop.index }}
+                                        </a>
+                                        <form action="{{ url_for('delete_partner_contract', id=partner.id, contract_index=loop.index0) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this contract?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No contracts uploaded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

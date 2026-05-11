@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-building"></i> Partners</h1>
+            <a href="{{ url_for('register_partner') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Register New Partner
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if partners %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Business Name</th>
+                        <th>Type</th>
+                        <th>KRA PIN</th>
+                        <th>Phone</th>
+                        <th>Vehicle Plate</th>
+                        <th>Status</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for partner in partners %}
+                    <tr>
+                        <td>{{ partner.business_name }}</td>
+                        <td>
+                            {% if partner.business_type == 'limited_company' %}
+                                Limited Company
+                            {% elif partner.business_type == 'registered_business' %}
+                                Registered Business
+                            {% else %}
+                                Sole Proprietorship
+                            {% endif %}
+                        </td>
+                        <td>{{ partner.kra_pin }}</td>
+                        <td>{{ partner.phone }}</td>
+                        <td>{{ partner.vehicle_plate or 'N/A' }}</td>
+                        <td>
+                            {% if partner.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif partner.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif partner.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Suspended</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ partner.date_registered.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <a href="{{ url_for('view_partner', id=partner.id) }}" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_partner', id=partner.id) }}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if current_user.role == 'admin' and partner.status == 'pending' %}
+                            <a href="{{ url_for('approve_partner', id=partner.id) }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-circle"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No partners registered yet.
+            <a href="{{ url_for('register_partner') }}">Register your first partner</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

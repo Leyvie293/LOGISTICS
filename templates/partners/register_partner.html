@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-building-add"></i> Register New Partner</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Business Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Business Information</h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.business_name.label(class="form-label") }}
+                            {{ form.business_name(class="form-control") }}
+                            {% for error in form.business_name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.business_type.label(class="form-label") }}
+                            {{ form.business_type(class="form-select") }}
+                            {% for error in form.business_type.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.registration_number.label(class="form-label") }}
+                            {{ form.registration_number(class="form-control") }}
+                            <small class="text-muted">For Limited Company or Registered Business</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.kra_pin.label(class="form-label") }}
+                            {{ form.kra_pin(class="form-control") }}
+                            {% for error in form.kra_pin.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.physical_address.label(class="form-label") }}
+                            {{ form.physical_address(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <!-- Director Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Director/Proprietor Information</h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_name.label(class="form-label") }}
+                            {{ form.director_name(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_id_number.label(class="form-label") }}
+                            {{ form.director_id_number(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_phone.label(class="form-label") }}
+                            {{ form.director_phone(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_email.label(class="form-label") }}
+                            {{ form.director_email(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <!-- Required Documents -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Required Documents</h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.git_cover.label(class="form-label") }}
+                            {{ form.git_cover(class="form-control") }}
+                            <small class="text-muted">GIT Cover (PDF, PNG, JPG)</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.incorporation_cert.label(class="form-label") }}
+                            {{ form.incorporation_cert(class="form-control") }}
+                            <small class="text-muted">Certificate of Incorporation / Registration Cert / ID</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.kra_certificate.label(class="form-label") }}
+                            {{ form.kra_certificate(class="form-control") }}
+                            <small class="text-muted">KRA PIN Certificate</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.logbook_copy.label(class="form-label") }}
+                            {{ form.logbook_copy(class="form-control") }}
+                            <small class="text-muted">Copy of Logbooks</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_id_copy.label(class="form-label") }}
+                            {{ form.director_id_copy(class="form-control") }}
+                            <small class="text-muted">Copy of Director's ID</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.driver_licenses.label(class="form-label") }}
+                            {{ form.driver_licenses(class="form-control", multiple=True) }}
+                            <small class="text-muted">Select multiple driver licenses if needed</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.contracts.label(class="form-label") }}
+                            {{ form.contracts(class="form-control", multiple=True) }}
+                            <small class="text-muted">Upload contracts (Partnership agreements, Service contracts, etc.)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Fleet Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Fleet Details (Optional)</h5>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_make.label(class="form-label") }}
+                            {{ form.vehicle_make(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_model.label(class="form-label") }}
+                            {{ form.vehicle_model(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_plate.label(class="form-label") }}
+                            {{ form.vehicle_plate(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_capacity_kg.label(class="form-label") }}
+                            {{ form.vehicle_capacity_kg(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> All documents will be reviewed by admin before approval.
+                    </div>
+                    
+                    <div class="text-end">
+                        <a href="{{ url_for('list_partners') }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

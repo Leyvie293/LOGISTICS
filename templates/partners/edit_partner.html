@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Partner: {{ partner.business_name }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Business Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Business Information</h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.business_name.label(class="form-label") }}
+                            {{ form.business_name(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.business_type.label(class="form-label") }}
+                            {{ form.business_type(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.registration_number.label(class="form-label") }}
+                            {{ form.registration_number(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.kra_pin.label(class="form-label") }}
+                            {{ form.kra_pin(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.physical_address.label(class="form-label") }}
+                            {{ form.physical_address(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <!-- Director Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Director/Proprietor Information</h5>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_name.label(class="form-label") }}
+                            {{ form.director_name(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_id_number.label(class="form-label") }}
+                            {{ form.director_id_number(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_phone.label(class="form-label") }}
+                            {{ form.director_phone(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_email.label(class="form-label") }}
+                            {{ form.director_email(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <!-- Fleet Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Fleet Details</h5>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_make.label(class="form-label") }}
+                            {{ form.vehicle_make(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_model.label(class="form-label") }}
+                            {{ form.vehicle_model(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_plate.label(class="form-label") }}
+                            {{ form.vehicle_plate(class="form-control") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ form.vehicle_capacity_kg.label(class="form-label") }}
+                            {{ form.vehicle_capacity_kg(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <!-- Document Upload Section (Optional for editing) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="border-bottom pb-2">Upload New Documents (Optional)</h5>
+                            <small class="text-muted">Only upload if you need to replace or add new documents</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.git_cover.label(class="form-label") }}
+                            {{ form.git_cover(class="form-control") }}
+                            <small class="text-muted">Replace GIT Cover</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.incorporation_cert.label(class="form-label") }}
+                            {{ form.incorporation_cert(class="form-control") }}
+                            <small class="text-muted">Replace Incorporation/Registration Document</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.kra_certificate.label(class="form-label") }}
+                            {{ form.kra_certificate(class="form-control") }}
+                            <small class="text-muted">Replace KRA Certificate</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.logbook_copy.label(class="form-label") }}
+                            {{ form.logbook_copy(class="form-control") }}
+                            <small class="text-muted">Replace Logbook Copy</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.director_id_copy.label(class="form-label") }}
+                            {{ form.director_id_copy(class="form-control") }}
+                            <small class="text-muted">Replace Director's ID Copy</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.driver_licenses.label(class="form-label") }}
+                            {{ form.driver_licenses(class="form-control", multiple=True) }}
+                            <small class="text-muted">Add additional driver licenses</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.contracts.label(class="form-label") }}
+                            {{ form.contracts(class="form-control", multiple=True) }}
+                            <small class="text-muted">Add additional contracts</small>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Note: Existing documents will remain. Uploading new documents will add them to existing ones. To delete documents, please go to the partner details page.
+                    </div>
+                    
+                    <div class="text-end">
+                        <a href="{{ url_for('view_partner', id=partner.id) }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

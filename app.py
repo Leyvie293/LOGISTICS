@@ -17,14 +17,11 @@ from flask_mail import Mail, Message
 from sqlalchemy import func, extract
 
 # Import your models and forms
-from models import db, User, Driver, Task, Company, Vehicle, Payment, MaintenanceRecord
+from models import db, User, Driver, Task, Company, Vehicle, Payment, MaintenanceRecord, Partner
 from forms import (
     RegistrationForm, LoginForm, DriverForm, TaskForm, SearchForm,
-    VehicleForm, PaymentForm, AdminUserEditForm
+    VehicleForm, PaymentForm, AdminUserEditForm, PartnerForm, PartnerApprovalForm, PartnerSearchForm
 )
-
-# Helper for route calculations (optional)
-# from route_utils import get_distance_and_time  # uncomment if you have API key
 
 app = Flask(__name__)
 
@@ -61,6 +58,20 @@ mail = Mail(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# ----------------------------------------------------------------------
+# Context processor to make logo available to all templates
+# ----------------------------------------------------------------------
+@app.context_processor
+def utility_processor():
+    """Make variables available to all templates"""
+    logo_path = os.path.join(app.config['UPLOAD_FOLDER'], 'logo.png')
+    logo_exists = os.path.exists(logo_path)
+    return dict(logo_exists=logo_exists)
+
+def allowed_file(filename):
+    """Check if file extension is allowed for upload"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
 
 # ----------------------------------------------------------------------
 # Database initialization (runs on app start, e.g., when gunicorn loads)
@@ -156,7 +167,7 @@ def send_sms(to, body):
         print(f"SMS would be sent to {to}: {body}")
 
 # ----------------------------------------------------------------------
-# Report generation functions (unchanged)
+# Report generation functions
 # ----------------------------------------------------------------------
 def generate_driver_csv(driver, tasks):
     output = StringIO()
@@ -285,7 +296,6 @@ def generate_summary_ppt(drivers):
 def index():
     return render_template('index.html')
 
-# Registration (keep but you may want to restrict later)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -293,7 +303,6 @@ def register():
     form = RegistrationForm()
     user_count = User.query.count()
     if form.validate_on_submit():
-        # In production, admin would assign company. For simplicity, use company_id=1.
         role = form.role.data
         user = User(username=form.username.data, email=form.email.data, role=role, company_id=1)
         user.set_password(form.password.data)
@@ -323,7 +332,6 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# Dashboard
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -337,7 +345,6 @@ def dashboard():
         users = None
     return render_template('dashboard.html', drivers=drivers, tasks=tasks, users=users)
 
-# API endpoint for dashboard analytics
 @app.route('/api/dashboard_data')
 @login_required
 def dashboard_data():
@@ -362,12 +369,43 @@ def dashboard_data():
         'monthly_data': monthly_data
     })
 
+# Admin logo upload
+@app.route('/admin/upload_logo', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def upload_logo():
+    """Admin route to upload/update company logo"""
+    if request.method == 'POST':
+        if 'logo' not in request.files:
+            flash('No file selected', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        file = request.files['logo']
+        if file.filename == '':
+            flash('No file selected', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        if file and allowed_file(file.filename):
+            # Delete old logo if exists
+            old_logo = os.path.join(app.config['UPLOAD_FOLDER'], 'logo.png')
+            if os.path.exists(old_logo):
+                os.remove(old_logo)
+            
+            # Save new logo
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'logo.png'))
+            flash('Company logo updated successfully!', 'success')
+        else:
+            flash('Invalid file type. Please upload PNG, JPG, or JPEG', 'danger')
+        
+        return redirect(url_for('dashboard'))
+    
+    return render_template('admin/upload_logo.html')
+
 # Driver management
 @app.route('/driver/add', methods=['GET', 'POST'])
 @login_required
 def add_driver():
     form = DriverForm()
-    # Populate vehicle choices for current company
     form.vehicle_id.choices = [(0, 'None')] + [(v.id, f"{v.make} {v.model} ({v.plate})") for v in Vehicle.query.filter_by(company_id=current_user.company_id).all()]
     if form.validate_on_submit():
         cert_path = save_file(form.certificate_of_conduct.data, prefix='cert')
@@ -409,7 +447,6 @@ def edit_driver(id):
     if current_user.role != 'admin' and driver.user_id != current_user.id:
         abort(403)
     form = DriverForm()
-    # Populate vehicle choices
     form.vehicle_id.choices = [(0, 'None')] + [(v.id, f"{v.make} {v.model} ({v.plate})") for v in Vehicle.query.filter_by(company_id=current_user.company_id).all()]
     if form.validate_on_submit():
         driver.name = form.name.data
@@ -429,7 +466,6 @@ def edit_driver(id):
         db.session.commit()
         flash('Driver details updated.', 'success')
         return redirect(url_for('driver_detail', id=driver.id))
-    # Pre-populate
     form.name.data = driver.name
     form.phone.data = driver.phone
     form.car_number_plate.data = driver.car_number_plate
@@ -524,7 +560,6 @@ def edit_vehicle(id):
         db.session.commit()
         flash('Vehicle updated.', 'success')
         return redirect(url_for('vehicle_detail', id=vehicle.id))
-    # Pre-populate
     form.make.data = vehicle.make
     form.model.data = vehicle.model
     form.plate.data = vehicle.plate
@@ -533,7 +568,7 @@ def edit_vehicle(id):
     form.status.data = vehicle.status
     return render_template('edit_vehicle.html', form=form, vehicle=vehicle)
 
-# Task management (with distance calculation placeholder)
+# Task management
 @app.route('/driver/<int:driver_id>/task/add', methods=['GET', 'POST'])
 @login_required
 def add_task(driver_id):
@@ -542,23 +577,12 @@ def add_task(driver_id):
         abort(403)
     form = TaskForm()
     if form.validate_on_submit():
-        # Optionally calculate distance (uncomment if API key set)
-        # distance_km, duration_sec = None, None
-        # try:
-        #     from route_utils import get_distance_and_time
-        #     distance_km, duration_sec = get_distance_and_time(form.load_location.data, form.offload_location.data)
-        # except:
-        #     pass
-        # fuel_cost = distance_km * 0.3 if distance_km else None
         task = Task(
             load_location=form.load_location.data,
             offload_location=form.offload_location.data,
             driver_id=driver.id,
             user_id=current_user.id,
             company_id=current_user.company_id,
-            # distance_km=distance_km,
-            # estimated_duration_sec=duration_sec,
-            # fuel_cost=fuel_cost
         )
         db.session.add(task)
         db.session.commit()
@@ -726,18 +750,379 @@ def summary_report():
         abort(400)
 
 # ----------------------------------------------------------------------
+# Partner Management Routes
+# ----------------------------------------------------------------------
+
+@app.route('/partners')
+@login_required
+def list_partners():
+    """List all partners for the current user's company"""
+    if current_user.role == 'admin':
+        query = Partner.query.filter_by(company_id=current_user.company_id)
+    else:
+        query = Partner.query.filter_by(user_id=current_user.id)
+    
+    business_name = request.args.get('business_name')
+    kra_pin = request.args.get('kra_pin')
+    status = request.args.get('status')
+    
+    if business_name:
+        query = query.filter(Partner.business_name.ilike(f'%{business_name}%'))
+    if kra_pin:
+        query = query.filter(Partner.kra_pin.ilike(f'%{kra_pin}%'))
+    if status:
+        query = query.filter(Partner.status == status)
+    
+    partners = query.order_by(Partner.date_registered.desc()).all()
+    return render_template('partners/list_partners.html', partners=partners)
+
+@app.route('/partner/register', methods=['GET', 'POST'])
+@login_required
+def register_partner():
+    """Register a new partner with all required documents"""
+    form = PartnerForm()
+    
+    if form.validate_on_submit():
+        # Save all documents
+        git_cover_path = save_file(form.git_cover.data, prefix='git_cover') if form.git_cover.data else None
+        incorporation_path = save_file(form.incorporation_cert.data, prefix='incorporation') if form.incorporation_cert.data else None
+        kra_path = save_file(form.kra_certificate.data, prefix='kra') if form.kra_certificate.data else None
+        logbook_path = save_file(form.logbook_copy.data, prefix='logbook') if form.logbook_copy.data else None
+        director_id_path = save_file(form.director_id_copy.data, prefix='director_id') if form.director_id_copy.data else None
+        
+        # Save multiple driver licenses
+        driver_license_paths = []
+        if form.driver_licenses.data:
+            files = form.driver_licenses.data
+            if not isinstance(files, list):
+                files = [files]
+            
+            for file in files:
+                if file and file.filename:
+                    path = save_file(file, prefix='driver_license')
+                    if path:
+                        driver_license_paths.append(path)
+        
+        # Save multiple contracts
+        contract_paths = []
+        if form.contracts.data:
+            files = form.contracts.data
+            if not isinstance(files, list):
+                files = [files]
+            
+            for file in files:
+                if file and file.filename:
+                    path = save_file(file, prefix='contract')
+                    if path:
+                        contract_paths.append(path)
+        
+        # Create partner record
+        partner = Partner(
+            business_name=form.business_name.data,
+            business_type=form.business_type.data,
+            registration_number=form.registration_number.data,
+            kra_pin=form.kra_pin.data,
+            phone=form.phone.data,
+            email=form.email.data,
+            physical_address=form.physical_address.data,
+            director_name=form.director_name.data,
+            director_id_number=form.director_id_number.data,
+            director_phone=form.director_phone.data,
+            director_email=form.director_email.data,
+            git_cover=git_cover_path,
+            incorporation_cert=incorporation_path,
+            kra_certificate=kra_path,
+            logbook_copy=logbook_path,
+            director_id_copy=director_id_path,
+            driver_licenses=','.join(driver_license_paths) if driver_license_paths else None,
+            contracts=','.join(contract_paths) if contract_paths else None,
+            vehicle_make=form.vehicle_make.data,
+            vehicle_model=form.vehicle_model.data,
+            vehicle_plate=form.vehicle_plate.data,
+            vehicle_capacity_kg=form.vehicle_capacity_kg.data,
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            status='pending'
+        )
+        
+        db.session.add(partner)
+        db.session.commit()
+        
+        flash('Partner registration submitted successfully! Awaiting admin approval.', 'success')
+        return redirect(url_for('list_partners'))
+    
+    return render_template('partners/register_partner.html', form=form)
+
+@app.route('/partner/<int:id>')
+@login_required
+def view_partner(id):
+    """View partner details and documents"""
+    partner = Partner.query.get_or_404(id)
+    
+    if current_user.role != 'admin' and partner.user_id != current_user.id:
+        abort(403)
+    
+    driver_licenses = partner.driver_licenses.split(',') if partner.driver_licenses else []
+    
+    return render_template('partners/view_partner.html', partner=partner, driver_licenses=driver_licenses)
+
+@app.route('/partner/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_partner(id):
+    """Edit partner information"""
+    partner = Partner.query.get_or_404(id)
+    
+    if current_user.role != 'admin' and partner.user_id != current_user.id:
+        abort(403)
+    
+    form = PartnerForm()
+    
+    if request.method == 'GET':
+        form.business_name.data = partner.business_name
+        form.business_type.data = partner.business_type
+        form.registration_number.data = partner.registration_number
+        form.kra_pin.data = partner.kra_pin
+        form.phone.data = partner.phone
+        form.email.data = partner.email
+        form.physical_address.data = partner.physical_address
+        form.director_name.data = partner.director_name
+        form.director_id_number.data = partner.director_id_number
+        form.director_phone.data = partner.director_phone
+        form.director_email.data = partner.director_email
+        form.vehicle_make.data = partner.vehicle_make
+        form.vehicle_model.data = partner.vehicle_model
+        form.vehicle_plate.data = partner.vehicle_plate
+        form.vehicle_capacity_kg.data = partner.vehicle_capacity_kg
+    
+    if form.validate_on_submit():
+        # Update text fields
+        partner.business_name = form.business_name.data
+        partner.business_type = form.business_type.data
+        partner.registration_number = form.registration_number.data
+        partner.kra_pin = form.kra_pin.data
+        partner.phone = form.phone.data
+        partner.email = form.email.data
+        partner.physical_address = form.physical_address.data
+        partner.director_name = form.director_name.data
+        partner.director_id_number = form.director_id_number.data
+        partner.director_phone = form.director_phone.data
+        partner.director_email = form.director_email.data
+        partner.vehicle_make = form.vehicle_make.data
+        partner.vehicle_model = form.vehicle_model.data
+        partner.vehicle_plate = form.vehicle_plate.data
+        partner.vehicle_capacity_kg = form.vehicle_capacity_kg.data
+        
+        # Update documents if new ones uploaded
+        if form.git_cover.data and form.git_cover.data.filename:
+            partner.git_cover = save_file(form.git_cover.data, prefix='git_cover')
+        if form.incorporation_cert.data and form.incorporation_cert.data.filename:
+            partner.incorporation_cert = save_file(form.incorporation_cert.data, prefix='incorporation')
+        if form.kra_certificate.data and form.kra_certificate.data.filename:
+            partner.kra_certificate = save_file(form.kra_certificate.data, prefix='kra')
+        if form.logbook_copy.data and form.logbook_copy.data.filename:
+            partner.logbook_copy = save_file(form.logbook_copy.data, prefix='logbook')
+        if form.director_id_copy.data and form.director_id_copy.data.filename:
+            partner.director_id_copy = save_file(form.director_id_copy.data, prefix='director_id')
+        
+        # Add new driver licenses
+        if form.driver_licenses.data:
+            files = form.driver_licenses.data
+            if not isinstance(files, list):
+                files = [files]
+            
+            new_licenses = []
+            for file in files:
+                if file and file.filename:
+                    path = save_file(file, prefix='driver_license')
+                    if path:
+                        new_licenses.append(path)
+            
+            if new_licenses:
+                existing = partner.driver_licenses.split(',') if partner.driver_licenses else []
+                all_licenses = existing + new_licenses
+                partner.driver_licenses = ','.join(all_licenses)
+        
+        # Add new contracts
+        if form.contracts.data:
+            files = form.contracts.data
+            if not isinstance(files, list):
+                files = [files]
+            
+            new_contracts = []
+            for file in files:
+                if file and file.filename:
+                    path = save_file(file, prefix='contract')
+                    if path:
+                        new_contracts.append(path)
+            
+            if new_contracts:
+                existing = partner.contracts.split(',') if partner.contracts else []
+                all_contracts = existing + new_contracts
+                partner.contracts = ','.join(all_contracts)
+        
+        db.session.commit()
+        flash('Partner information updated successfully!', 'success')
+        return redirect(url_for('view_partner', id=partner.id))
+    
+    return render_template('partners/edit_partner.html', form=form, partner=partner)
+
+@app.route('/partner/<int:id>/approve', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def approve_partner(id):
+    """Admin approval/rejection/suspension of partner"""
+    partner = Partner.query.get_or_404(id)
+    form = PartnerApprovalForm()
+    
+    if form.validate_on_submit():
+        old_status = partner.status
+        partner.status = form.status.data
+        
+        if form.status.data in ['rejected', 'suspended']:
+            partner.rejection_reason = form.rejection_reason.data
+        else:
+            partner.rejection_reason = None
+        
+        if form.status.data == 'approved' and old_status != 'approved':
+            partner.date_approved = datetime.utcnow()
+            partner.approved_by = current_user.id
+        
+        db.session.commit()
+        
+        flash(f'Partner {partner.business_name} has been {form.status.data}!', 'success')
+        return redirect(url_for('list_partners'))
+    
+    return render_template('partners/approve_partner.html', form=form, partner=partner)
+
+@app.route('/partner/<int:id>/delete_document/<doc_type>', methods=['POST'])
+@login_required
+def delete_partner_document(id, doc_type):
+    """Delete a specific partner document"""
+    partner = Partner.query.get_or_404(id)
+    
+    if current_user.role != 'admin' and partner.user_id != current_user.id:
+        abort(403)
+    
+    doc_fields = {
+        'git_cover': 'git_cover',
+        'incorporation': 'incorporation_cert',
+        'kra': 'kra_certificate',
+        'logbook': 'logbook_copy',
+        'director_id': 'director_id_copy'
+    }
+    
+    if doc_type in doc_fields:
+        field = doc_fields[doc_type]
+        file_path = getattr(partner, field)
+        if file_path:
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+            setattr(partner, field, None)
+            db.session.commit()
+            flash('Document deleted successfully.', 'success')
+    
+    return redirect(url_for('view_partner', id=partner.id))
+
+@app.route('/partner/<int:id>/delete_license/<int:license_index>', methods=['POST'])
+@login_required
+def delete_driver_license(id, license_index):
+    """Delete a specific driver license from partner"""
+    partner = Partner.query.get_or_404(id)
+    
+    if current_user.role != 'admin' and partner.user_id != current_user.id:
+        abort(403)
+    
+    if partner.driver_licenses:
+        licenses = partner.driver_licenses.split(',')
+        if license_index < len(licenses):
+            file_path = licenses[license_index]
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+            
+            licenses.pop(license_index)
+            partner.driver_licenses = ','.join(licenses) if licenses else None
+            db.session.commit()
+            flash('Driver license deleted successfully.', 'success')
+    
+    return redirect(url_for('view_partner', id=partner.id))
+
+@app.route('/partner/<int:id>/delete_contract/<int:contract_index>', methods=['POST'])
+@login_required
+def delete_partner_contract(id, contract_index):
+    """Delete a specific contract from partner"""
+    partner = Partner.query.get_or_404(id)
+    
+    if current_user.role != 'admin' and partner.user_id != current_user.id:
+        abort(403)
+    
+    if partner.contracts:
+        contracts = partner.contracts.split(',')
+        if contract_index < len(contracts):
+            file_path = contracts[contract_index]
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+            
+            contracts.pop(contract_index)
+            partner.contracts = ','.join(contracts) if contracts else None
+            db.session.commit()
+            flash('Contract deleted successfully.', 'success')
+    
+    return redirect(url_for('view_partner', id=partner.id))
+
+@app.route('/partner/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_partner(id):
+    """Delete a partner completely (admin only)"""
+    partner = Partner.query.get_or_404(id)
+    
+    if partner.company_id != current_user.company_id:
+        abort(403)
+    
+    # Delete all associated files
+    doc_fields = ['git_cover', 'incorporation_cert', 'kra_certificate', 'logbook_copy', 'director_id_copy']
+    for field in doc_fields:
+        file_path = getattr(partner, field)
+        if file_path:
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(file_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+    
+    # Delete driver licenses
+    if partner.driver_licenses:
+        licenses = partner.driver_licenses.split(',')
+        for license_path in licenses:
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(license_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+    
+    # Delete contracts
+    if partner.contracts:
+        contracts = partner.contracts.split(',')
+        for contract_path in contracts:
+            full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(contract_path))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+    
+    db.session.delete(partner)
+    db.session.commit()
+    flash(f'Partner {partner.business_name} has been deleted.', 'success')
+    return redirect(url_for('list_partners'))
+
+# ----------------------------------------------------------------------
 # Temporary admin creation route (remove after first use)
 # ----------------------------------------------------------------------
 @app.route('/create-admin')
 def create_admin():
     with app.app_context():
-        # Ensure default company exists
         company = Company.query.first()
         if not company:
             company = Company(name='Default Company')
             db.session.add(company)
             db.session.commit()
-        # Create admin user if not exists
         if not User.query.filter_by(username='admin').first():
             admin = User(username='admin', email='admin@example.com', role='admin', company_id=company.id)
             admin.set_password('admin')

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-image"></i> Upload Company Logo</h4>
+            </div>
+            <div class="card-body text-center">
+                {% if logo_exists %}
+                    <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Current Logo" class="img-fluid mb-3" style="max-height: 150px; border: 1px solid #ddd; padding: 10px;">
+                    <p class="text-muted">Current Logo</p>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No logo uploaded yet.
+                    </div>
+                {% endif %}
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="logo" class="form-label">Select New Logo</label>
+                        <input type="file" class="form-control" id="logo" name="logo" accept="image/png,image/jpg,image/jpeg" required>
+                        <small class="text-muted">Recommended size: 200x200px. PNG, JPG, JPEG only.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload Logo</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

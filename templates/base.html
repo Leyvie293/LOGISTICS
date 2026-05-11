@@ -16,8 +16,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="bi bi-truck"></i> Riley Falcon Logistics
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                {% if logo_exists %}
+                    <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Riley Falcon Logistics Logo" height="40" class="me-2">
+                {% else %}
+                    <i class="bi bi-truck me-2"></i>
+                {% endif %}
+                <span>Riley Falcon Logistics</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -35,10 +40,20 @@
                                 <i class="bi bi-truck"></i> Vehicles
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('list_partners') }}">
+                                <i class="bi bi-building"></i> Partners
+                            </a>
+                        </li>
                         {% if current_user.role == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('list_users') }}">
                                 <i class="bi bi-people"></i> Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('upload_logo') }}">
+                                <i class="bi bi-image"></i> Company Logo
                             </a>
                         </li>
                         {% endif %}

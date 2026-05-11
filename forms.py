@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, FloatField, DateField, SelectMultipleField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional
 from models import User
 
 class RegistrationForm(FlaskForm):
@@ -32,7 +32,7 @@ class DriverForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired()])
     phone = StringField('Phone Number', validators=[DataRequired()])
     car_number_plate = StringField('Car Number Plate', validators=[DataRequired()])
-    vehicle_id = SelectField('Assign Vehicle', coerce=int, choices=[(0, 'None')])  # added
+    vehicle_id = SelectField('Assign Vehicle', coerce=int, choices=[(0, 'None')])
     certificate_of_conduct = FileField('Certificate of Good Conduct', validators=[FileAllowed(['pdf', 'jpg', 'jpeg', 'png'], 'PDF/Image only')])
     driving_license = FileField('Driving License', validators=[FileAllowed(['pdf', 'jpg', 'jpeg', 'png'], 'PDF/Image only')])
     national_id = FileField('National ID', validators=[FileAllowed(['pdf', 'jpg', 'jpeg', 'png'], 'PDF/Image only')])
@@ -60,7 +60,7 @@ class VehicleForm(FlaskForm):
     model = StringField('Model', validators=[DataRequired()])
     plate = StringField('License Plate', validators=[DataRequired(), Length(max=20)])
     capacity_kg = FloatField('Capacity (kg)')
-    insurance_expiry = DateField('Insurance Expiry', format='%Y-%m-%d')
+    insurance_expiry = DateField('Insurance Expiry', format='%Y-%m-%d', validators=[Optional()])
     status = SelectField('Status', choices=[('active','Active'), ('under_repair','Under Repair'), ('retired','Retired')])
     submit = SubmitField('Save')
 
@@ -68,13 +68,13 @@ class PaymentForm(FlaskForm):
     amount = FloatField('Amount', validators=[DataRequired()])
     type = SelectField('Type', choices=[('trip','Per Trip'), ('salary','Salary'), ('bonus','Bonus')])
     description = TextAreaField('Description')
-    task_id = SelectField('Associated Task', coerce=int, choices=[(0, 'None')])  # populated dynamically
+    task_id = SelectField('Associated Task', coerce=int, choices=[(0, 'None')])
     submit = SubmitField('Record Payment')
 
 class InvoiceForm(FlaskForm):
     client_name = StringField('Client Name', validators=[DataRequired()])
     client_email = StringField('Client Email')
-    tasks = SelectMultipleField('Tasks', coerce=int)  # populated dynamically
+    tasks = SelectMultipleField('Tasks', coerce=int)
     submit = SubmitField('Create Invoice')
 
 class AdminUserEditForm(FlaskForm):
@@ -83,3 +83,64 @@ class AdminUserEditForm(FlaskForm):
     role = SelectField('Role', choices=[('admin','Admin'), ('staff','Staff')])
     password = PasswordField('Password (leave blank to keep unchanged)')
     submit = SubmitField('Save')
+
+# ------------------------------
+# Partner Forms
+# ------------------------------
+class PartnerForm(FlaskForm):
+    # Business Information
+    business_name = StringField('Business Name', validators=[DataRequired()])
+    business_type = SelectField('Business Type', choices=[
+        ('limited_company', 'Limited Company'),
+        ('registered_business', 'Registered Business'),
+        ('sole_proprietorship', 'Sole Proprietorship')
+    ], validators=[DataRequired()])
+    registration_number = StringField('Registration Number', validators=[Optional()])
+    kra_pin = StringField('KRA PIN', validators=[DataRequired(), Length(min=11, max=11)])
+    phone = StringField('Phone Number', validators=[DataRequired(), Length(min=10, max=15)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    physical_address = StringField('Physical Address', validators=[Optional()])
+    
+    # Director Information
+    director_name = StringField('Director/Proprietor Name', validators=[DataRequired()])
+    director_id_number = StringField('Director ID Number', validators=[DataRequired()])
+    director_phone = StringField('Director Phone', validators=[Optional()])
+    director_email = StringField('Director Email', validators=[Optional(), Email()])
+    
+    # Documents - All required for onboarding
+    git_cover = FileField('GIT Cover Document', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    incorporation_cert = FileField('Certificate of Incorporation / Registration Cert / ID', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    kra_certificate = FileField('KRA PIN Certificate', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    logbook_copy = FileField('Copy of Logbooks', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    director_id_copy = FileField("Copy of Director's ID", validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    driver_licenses = FileField('Driver Licenses (Select multiple if needed)', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    contracts = FileField('Contracts (Select multiple if needed)', validators=[FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'PDF and images only')])
+    
+    # Fleet Details (Optional)
+    vehicle_make = StringField('Vehicle Make', validators=[Optional()])
+    vehicle_model = StringField('Vehicle Model', validators=[Optional()])
+    vehicle_plate = StringField('Vehicle Plate Number', validators=[Optional()])
+    vehicle_capacity_kg = FloatField('Vehicle Capacity (kg)', validators=[Optional()])
+    
+    submit = SubmitField('Register Partner')
+
+class PartnerApprovalForm(FlaskForm):
+    status = SelectField('Status', choices=[
+        ('approved', 'Approve'),
+        ('rejected', 'Reject'),
+        ('suspended', 'Suspend')
+    ], validators=[DataRequired()])
+    rejection_reason = TextAreaField('Reason (if rejecting or suspending)', validators=[Optional()])
+    submit = SubmitField('Update Status')
+
+class PartnerSearchForm(FlaskForm):
+    business_name = StringField('Business Name', validators=[Optional()])
+    kra_pin = StringField('KRA PIN', validators=[Optional()])
+    status = SelectField('Status', choices=[
+        ('', 'All'),
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('suspended', 'Suspended')
+    ], validators=[Optional()])
+    submit = SubmitField('Search')
